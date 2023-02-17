@@ -45,8 +45,8 @@ void USInteractionComponent::PrimaryIneract()
 	MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
 	
 	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
-	FVector End = EyeLocation + EyeRotation.Vector() * 150.0f;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);//we add the dynamic object type to the query
+	FVector End = EyeLocation + EyeRotation.Vector() * 200.0f;
 	//FHitResult Hit;
 	//bool bBlockingHit = GetWorld()->LineTraceSingleByObjectType(Hit, EyeLocation, End, ObjectQueryParams);
 

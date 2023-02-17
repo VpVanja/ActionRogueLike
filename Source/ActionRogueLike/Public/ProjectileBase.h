@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "SMagicProjectile.generated.h"
+#include "ProjectileBase.generated.h"
 
 
 class USphereComponent;
@@ -12,13 +12,13 @@ class UProjectileMovementComponent;
 class UParticleSystemComponent;
 
 UCLASS()
-class ACTIONROGUELIKE_API ASMagicProjectile : public AActor
+class ACTIONROGUELIKE_API AProjectileBase : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ASMagicProjectile();
+	AProjectileBase();
 
 protected:
 
@@ -32,12 +32,8 @@ protected:
 	UParticleSystemComponent* EffectComp;
 
 	FTimerHandle CollisionSetTimer;
-	
-	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	
 
 public:	
 	// Called every frame
