@@ -46,13 +46,13 @@ void USInteractionComponent::PrimaryIneract()
 	
 	FCollisionObjectQueryParams ObjectQueryParams;
 	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);//we add the dynamic object type to the query
-	FVector End = EyeLocation + EyeRotation.Vector() * 200.0f;
+	FVector End = EyeLocation + EyeRotation.Vector() * 300.0f;
 	//FHitResult Hit;
 	//bool bBlockingHit = GetWorld()->LineTraceSingleByObjectType(Hit, EyeLocation, End, ObjectQueryParams);
 
 	TArray<FHitResult> Hits;
 
-	float Radius = 30.0f;
+	float Radius = 60.0f;
 	
 	FCollisionShape Shape;
 	Shape.SetSphere(Radius);

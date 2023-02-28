@@ -4,12 +4,16 @@
 #include "SCharacter.h"
 
 
+#include "AITypes.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "SInteractionComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "EntitySystem/MovieSceneEntitySystemRunner.h"
+#include "SAttributeComponent.h"
+#include "Kismet/GameplayStatics.h"
+
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -28,27 +32,32 @@ ASCharacter::ASCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	InteractionComp = CreateDefaultSubobject<USInteractionComponent>(TEXT("InteractionComp"));
-	
+
+	AttributeComp = CreateDefaultSubobject<USAttributeComponent>(TEXT("AttributeComp"));
+
+	HandSocketName = TEXT("Muzzle_01");
+	TimeToHitParamName = TEXT("TimeToHit");
+	HealOrDamageSwitchParamName = TEXT("HealDamageSwitch");
 }
 
+void ASCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
 
-
+	AttributeComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
+}
 
 // Called when the game starts or when spawned
 void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
-
 
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
 }
-
 
 
 // Called to bind functionality to input
@@ -67,6 +76,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction(TEXT("BlackHoleAbility"), IE_Pressed, this, &ASCharacter::BlackHoleAbility);
 	PlayerInputComponent->BindAction(TEXT("DashAbility"), IE_Pressed, this, &ASCharacter::DashAbility);
 }
+
 
 
 
@@ -90,6 +100,13 @@ inline void ASCharacter::MoveRight(float Value)
 	//FVector RightVector1 = ControlRot.Vector().RightVector;// This is an alternative way to get the right vector. and it works.
 }
 
+void ASCharacter::PrimaryInteract()
+{
+	if (InteractionComp)
+	{
+		InteractionComp->PrimaryIneract();
+	}
+}
 
 
 void ASCharacter::PrimaryAttack()
@@ -97,44 +114,82 @@ void ASCharacter::PrimaryAttack()
 	if (DidTimerFire)
 	{
 		PlayAnimMontage(AttackAnim);
+		if (CastVfx)
+		{
+			UGameplayStatics::SpawnEmitterAttached(CastVfx, GetMesh(), HandSocketName);
+		}
+		
 		GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, this, &ASCharacter::PrimaryAttack_TimeElapsed, 0.2f);
                 	//GetWorldTimerManager().ClearTimer(TimerHandle_PrimaryAttack);
 		DidTimerFire = false;
 	}
 }
 
-
-
 void ASCharacter::PrimaryAttack_TimeElapsed()// This is a timer function. it is called after 0.2 seconds of the PrimaryAttack function. so it matches the animation.
 {
-	CameraTrace();
-	
-	FTransform SpawnTM = GetProjectileTransform();
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; 
-	SpawnParams.Instigator = this;
-	
-	SpawnedProjectile = GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnTM, SpawnParams);
-	DidTimerFire = true;
-
-	GetMesh()->IgnoreActorWhenMoving(SpawnedProjectile, true);
-	GetCapsuleComponent()->IgnoreActorWhenMoving(SpawnedProjectile, true);
+	SpawnProjectile(ProjectileClass);
 }
 
 
-void ASCharacter::PrimaryInteract()
+
+void ASCharacter::BlackHoleAbility()
 {
-	if (InteractionComp)
+	if (DidTimerFire)
 	{
-		InteractionComp->PrimaryIneract();
+		PlayAnimMontage(AttackAnim);
+		if (CastVfx)
+		{
+			UGameplayStatics::SpawnEmitterAttached(CastVfx, GetMesh(), HandSocketName);
+		}
+		GetWorldTimerManager().SetTimer(TimerHandle_BlackHoleAbility, this, &ASCharacter::BlackHoleAbility_TimeElapsed, 0.2f);
+		DidTimerFire = false;
 	}
 	
 }
 
 
+void ASCharacter::BlackHoleAbility_TimeElapsed()
+{
+	SpawnProjectile(BlackHoleClass);
+}
 
-void ASCharacter::CameraTrace()
+
+void ASCharacter::DashAbility()
+{
+	if (DidTimerFire)
+	{
+		PlayAnimMontage(AttackAnim);
+		if (CastVfx)
+		{
+			UGameplayStatics::SpawnEmitterAttached(CastVfx, GetMesh(), HandSocketName);
+		}
+        	GetWorldTimerManager().SetTimer(TimerHandle_DashAbility, this, &ASCharacter::DashAbility_TimeElapsed, 0.2f);
+		DidTimerFire = false;
+	}
+	
+}
+
+void ASCharacter::DashAbility_TimeElapsed()
+{
+	SpawnProjectile(TeleportProjectileClass);
+}
+
+
+void ASCharacter::SpawnProjectile(TSubclassOf<AActor> ClassToSpawn)
+{
+	DidTimerFire = true;
+	FTransform SpawnTM = GetProjectileTransformFromTraceEnd(CameraTrace());
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; 
+	SpawnParams.Instigator = this;
+
+	SpawnedTeleporter = GetWorld()->SpawnActor<AActor>(ClassToSpawn, SpawnTM, SpawnParams);
+	
+	GetCapsuleComponent()->IgnoreActorWhenMoving(SpawnedTeleporter, true);
+}
+
+FVector ASCharacter::CameraTrace()
 {
 	FVector Start = CameraComp->GetComponentLocation();
 	FVector End = Start + CameraComp->GetForwardVector() * 10000.0f;
@@ -148,47 +203,24 @@ void ASCharacter::CameraTrace()
 	ObjectQueryParams.AddObjectTypesToQuery(ECC_Visibility);
 	FCollisionQueryParams CollisionQueryParams;
 	CollisionQueryParams.AddIgnoredActor(this);
+
+	FVector TraceEnd = Start + CameraComp->GetForwardVector() * 10000.0f;
 	
 	bool bBlockingHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_GameTraceChannel1, CollisionQueryParams); // this is the way we will probably use in the future and set the projectile to ignore this channel.
-	//bool bBlockingHit = GetWorld()->LineTraceSingleByObjectType(HitResult, Start, End, ObjectQueryParams, CollisionQueryParams);
 	if (bBlockingHit)
 	{
-		ProjectileDestination = HitResult.ImpactPoint;
+		TraceEnd = HitResult.ImpactPoint;
 	}
-	else
-	{
-		ProjectileDestination = End;
-	}
-}
 
-
-
-
-void ASCharacter::BlackHoleAbility()
-{
-	PlayAnimMontage(AttackAnim);
-	GetWorldTimerManager().SetTimer(TimerHandle_BlackHoleAbility, this, &ASCharacter::BlackHoleAbility_TimeElapsed, 0.2f);
-}
-
-void ASCharacter::BlackHoleAbility_TimeElapsed()
-{
-	CameraTrace();
+	return TraceEnd;
 	
-	FTransform SpawnTM = GetProjectileTransform();
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; 
-	SpawnParams.Instigator = this;
-	GetWorld()->SpawnActor<AActor>(BlackHoleClass, SpawnTM, SpawnParams);
 }
 
-
-
-FTransform ASCharacter::GetProjectileTransform()
+FTransform ASCharacter::GetProjectileTransformFromTraceEnd(FVector Destination)
 {
-	FVector HandLocation = GetMesh()->GetSocketLocation("Muzzle_01");
+	FVector HandLocation = GetMesh()->GetSocketLocation(HandSocketName);
 
-	FVector SpawnVector = ProjectileDestination - HandLocation;
+	FVector SpawnVector = Destination - HandLocation; //here we will remove the memeber variable and use the trace end location. Which will be the impact point. so we need to move this code to the CameraTrace function. and rename the function
 
 	FRotator ProjectileRotation =  SpawnVector.Rotation();
 	
@@ -196,22 +228,30 @@ FTransform ASCharacter::GetProjectileTransform()
 	return SpawnTM;
 }
 
-
-
-void ASCharacter::DashAbility()
+void ASCharacter::OnHealthChanged(AActor* InstigatorActor, USAttributeComponent* OwningComp, float NewHealth,
+	float Delta)
 {
-	CameraTrace();
-	PlayAnimMontage(AttackAnim);
-	FTransform SpawnTM = GetProjectileTransform();
+	if (Delta < 0.0f)
+	{
+		GetMesh()->SetScalarParameterValueOnMaterials(HealOrDamageSwitchParamName, 1.0f);
+		GetMesh()->SetScalarParameterValueOnMaterials(TimeToHitParamName, GetWorld()->TimeSeconds);
+		
+	}
+	if (Delta > 0.0f && NewHealth > 0.0f)
+	{
+		GetMesh()->SetScalarParameterValueOnMaterials(HealOrDamageSwitchParamName, 0.0f);
+		GetMesh()->SetScalarParameterValueOnMaterials(TimeToHitParamName, GetWorld()->TimeSeconds);
+		
+	}
 	
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; 
-	SpawnParams.Instigator = this;
-	
-	SpawnedTeleporter = GetWorld()->SpawnActor<AActor>(TeleportProjectileClass, SpawnTM, SpawnParams);
-	
-	GetCapsuleComponent()->IgnoreActorWhenMoving(SpawnedTeleporter, true);
+	if (NewHealth <= 0 && Delta <= 0)
+	{
+		
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			DisableInput(PC);
+		}
+		
+	}
 }
-
-
 

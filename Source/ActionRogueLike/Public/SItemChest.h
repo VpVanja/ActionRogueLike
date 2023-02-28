@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "SGameplayInterface.h"
 #include "GameFramework/Actor.h"
-#include "SGameplayInterface.h"
 #include "SItemChest.generated.h"
 
 class USphereComponent;
@@ -20,6 +19,7 @@ class ACTIONROGUELIKE_API ASItemChest : public AActor, public ISGameplayInterfac
 public:
 	UPROPERTY(EditAnywhere)
 	float TargetPitch;
+	
 	// Sets default values for this actor's properties
 	ASItemChest();
 
@@ -30,11 +30,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	 UStaticMeshComponent* LidMeshComp;
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 };

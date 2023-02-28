@@ -10,12 +10,21 @@
 #include "SCharacter.h"
 
 ASTeleportProjectile::ASTeleportProjectile()
-{
-
-	TeleportEffect = CreateDefaultSubobject<UParticleSystem>(TEXT("TeleportEffect"));
-	
+{	
+		MovementComp->InitialSpeed = 6000.0f;
 }
 
+void ASTeleportProjectile::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	SphereComp->OnComponentHit.AddDynamic(this, &ASTeleportProjectile::OnActorHit);
+}
+
+void ASTeleportProjectile::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
 
 
 
@@ -31,45 +40,44 @@ void ASTeleportProjectile::BeginPlay()
 
 
 
-
-void ASTeleportProjectile::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 void ASTeleportProjectile::StopProjectile()
 {
+	GetWorldTimerManager().ClearTimer(StopProjectileTImerHandle);
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TeleportEffect, GetActorLocation(), GetActorRotation());
+	
 	MovementComp->StopMovementImmediately();
-	GetWorldTimerManager().SetTimer(TeleportTimerHandle, this, &ASTeleportProjectile::Teleport, 0.2f, false);
+	
+	EffectComp->DeactivateSystem();
+	
+	SetActorEnableCollision(false);
+	
+	GetWorldTimerManager().SetTimer(TeleportTimerHandle, this, &ASTeleportProjectile::TeleportInstigator, 0.2f, false);
 	
 }
 
 
-void ASTeleportProjectile::PostInitializeComponents()
+void ASTeleportProjectile::Explode_Implementation()
 {
-	Super::PostInitializeComponents();
-
-	SphereComp->OnComponentHit.AddDynamic(this, &ASTeleportProjectile::OnHit);
-}
-
-
-
-void ASTeleportProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-	FVector NormalImpulse, const FHitResult& Hit)
-{
+	//Super::Explode_Implementation(); //we are overriding the the Explode cemopletely so we dont need to call the super
+	
 	GetWorldTimerManager().ClearTimer(StopProjectileTImerHandle);
 	GetWorldTimerManager().ClearTimer(TeleportTimerHandle);
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TeleportEffect, GetActorLocation(), GetActorRotation());
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactVfx, GetActorLocation(), GetActorRotation());
 	MovementComp->StopMovementImmediately();
-	GetInstigator()->SetActorLocation(GetActorLocation());
+	SetActorEnableCollision(false);
+	GetWorldTimerManager().SetTimer(TeleportOnHitTimerHandle, this, &ASTeleportProjectile::TeleportInstigator, 0.2f, false);
 	
-	
-	Destroy();
 }
 
-inline void ASTeleportProjectile::Teleport()
+
+inline void ASTeleportProjectile::TeleportInstigator()
 {
-	GetInstigator()->SetActorLocation(GetActorLocation());
-	Destroy();
+	AActor* ActorToTeleport = GetInstigator();
+	if (ensure(ActorToTeleport))
+	{
+		ActorToTeleport->TeleportTo(GetActorLocation(), ActorToTeleport->GetActorRotation(), false, false);
+        	Destroy();
+	}
+	
 }
+

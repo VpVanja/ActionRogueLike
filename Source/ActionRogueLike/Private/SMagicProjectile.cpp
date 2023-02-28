@@ -2,9 +2,14 @@
 
 
 #include "SMagicProjectile.h"
+
+
+#include "SAttributeComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
 // Sets default values
 ASMagicProjectile::ASMagicProjectile()
 {
@@ -24,25 +29,56 @@ ASMagicProjectile::ASMagicProjectile()
 	MovementComp->InitialSpeed = 1000.0f;
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->bInitialVelocityInLocalSpace = true;
+
+	AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComp"));
+	AudioComp->SetupAttachment(SphereComp);
 	
 }
 
-
-
-
-// Called when the game starts or when spawned
-void ASMagicProjectile::BeginPlay()
+void ASMagicProjectile::PostInitializeComponents()
 {
-	Super::BeginPlay();
-	
-	
-	
+	Super::PostInitializeComponents();
+	SphereComp->OnComponentBeginOverlap.AddDynamic(this, &ASMagicProjectile::OnActorOverlap);
+	SphereComp->OnComponentHit.AddDynamic(this, &ASMagicProjectile::OnActorHit);
 }
 
-// Called every frame
-void ASMagicProjectile::Tick(float DeltaTime)
+
+void ASMagicProjectile::OnActorHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
 {
-	Super::Tick(DeltaTime);
-
+	if (ensure (ImpactVfx))
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this,ImpactVfx, GetActorLocation(), GetActorRotation());
+	}
+	if (ensure (ImpactSound))
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+	}
+	if (ensure (CameraShake))
+	{
+		UGameplayStatics::PlayWorldCameraShake(this, CameraShake, GetActorLocation(), 0.0f, 1000.0f, 1.0f, false);
+	}
+	
+	Destroy();
 }
 
+
+
+void ASMagicProjectile::OnActorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	
+	if (OtherActor && OtherActor != GetInstigator())
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactVfx, GetActorLocation(), GetActorRotation());
+		// we cast to the USAttributeComponent class instead of the Character class because it works with any actor that has the USAttributeComponent component.
+		USAttributeComponent* AttributeComp = Cast<USAttributeComponent>(OtherActor->GetComponentByClass(USAttributeComponent::StaticClass())); 
+		if (AttributeComp)
+		{
+			AttributeComp->ApplyHealthChange(GetInstigator(), DamageAmount);
+			Destroy();
+		}
+		
+	}
+	
+}

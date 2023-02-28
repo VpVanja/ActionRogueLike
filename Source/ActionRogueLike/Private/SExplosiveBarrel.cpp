@@ -30,25 +30,17 @@ ASExplosiveBarrel::ASExplosiveBarrel()
 
 	ExplosionEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("ExplosionEffect"));
 	
-	
-	
 }
 
-// Called when the game starts or when spawned
-void ASExplosiveBarrel::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
 
 void ASExplosiveBarrel::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	MeshComp->OnComponentHit.AddDynamic(this, &ASExplosiveBarrel::OnHit);
+	MeshComp->OnComponentHit.AddDynamic(this, &ASExplosiveBarrel::OnHitBarrel);
 }
 
-void ASExplosiveBarrel::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+void ASExplosiveBarrel::OnHitBarrel(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
                               FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (Cast <APawn>(OtherActor) == nullptr)
@@ -73,10 +65,4 @@ void ASExplosiveBarrel::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 }
 
 
-// Called every frame
-void ASExplosiveBarrel::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
 

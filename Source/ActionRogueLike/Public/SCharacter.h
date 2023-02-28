@@ -12,7 +12,7 @@ class UCameraComponent;
 class USInteractionComponent;
 class UAnimMontage;
 class ASTeleportProjectile;
-
+class USAttributeComponent;
 UCLASS()
 class ACTIONROGUELIKE_API ASCharacter : public ACharacter
 {
@@ -48,10 +48,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Attack")
 	UAnimMontage* AttackAnim;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UParticleSystem* CastVfx;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USAttributeComponent* AttributeComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FName HandSocketName;
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FName TimeToHitParamName;
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FName HealOrDamageSwitchParamName;
 
 	FTimerHandle TimerHandle_PrimaryAttack;
 	FTimerHandle TimerHandle_BlackHoleAbility;
+	FTimerHandle TimerHandle_DashAbility;
 
 
 	UPROPERTY()
@@ -69,13 +81,14 @@ protected:
 	
 
 	UFUNCTION()
-	void CameraTrace();
+	FVector CameraTrace();
 	UFUNCTION()
-	FTransform GetProjectileTransform();
+	FTransform GetProjectileTransformFromTraceEnd(FVector Destination);
 	UFUNCTION()
 	void DashAbility();
 	
-	
+	UFUNCTION()
+	void OnHealthChanged(AActor* InstigatorActor, USAttributeComponent* OwningComp, float NewHealth, float Delta);
 	
 	
 	// Called when the game starts or when spawned
@@ -93,6 +106,11 @@ protected:
 	void BlackHoleAbility();
 	UFUNCTION()
 	void BlackHoleAbility_TimeElapsed();
+	UFUNCTION()
+	void DashAbility_TimeElapsed();
+
+	UFUNCTION()
+	void SpawnProjectile(TSubclassOf<AActor> ClassToSpawn);
 
 public:	
 	// Called every frame
@@ -101,8 +119,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	
-		
+	virtual void PostInitializeComponents() override;
 
 };
 

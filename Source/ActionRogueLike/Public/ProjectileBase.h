@@ -10,8 +10,11 @@
 class USphereComponent;
 class UProjectileMovementComponent;
 class UParticleSystemComponent;
-
-UCLASS()
+class UAudioComponent;
+class USoundBase;
+class UParticleSystem;
+class USphereComponent;
+UCLASS(ABSTRACT)
 class ACTIONROGUELIKE_API AProjectileBase : public AActor
 {
 	GENERATED_BODY()
@@ -22,6 +25,9 @@ public:
 
 protected:
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+	UParticleSystem* ImpactVfx;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* SphereComp;
 
@@ -30,6 +36,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UParticleSystemComponent* EffectComp;
+
+	UFUNCTION()
+	virtual void OnActorHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent) // since we are declaring explode as blurpting native event, we need to define it as Explode_Implementation
+	void Explode();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAudioComponent* AudioComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	USoundBase* ImpactSound;
 
 	FTimerHandle CollisionSetTimer;
 	// Called when the game starts or when spawned

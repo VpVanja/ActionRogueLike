@@ -4,8 +4,9 @@
 #include "ProjectileBase.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
-
+#include "Components/AudioComponent.h"
 // Sets default values
 AProjectileBase::AProjectileBase()
 {
@@ -25,8 +26,17 @@ AProjectileBase::AProjectileBase()
 	MovementComp->InitialSpeed = 1000.0f;
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->bInitialVelocityInLocalSpace = true;
+	MovementComp->ProjectileGravityScale = 0.0f;
+	MovementComp->InitialSpeed = 8000.0f;
+
+	AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComp"));
+	AudioComp->SetupAttachment(SphereComp);
+	
+	ImpactVfx = CreateDefaultSubobject<UParticleSystem>(TEXT("ImpactVfx"));
 
 }
+
+
 
 // Called when the game starts or when spawned
 void AProjectileBase::BeginPlay()
@@ -42,3 +52,26 @@ void AProjectileBase::Tick(float DeltaTime)
 
 }
 
+
+void AProjectileBase::OnActorHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	Explode();
+}
+
+
+
+void AProjectileBase::Explode_Implementation() // this is the implementation of the blueprint native event
+{
+	if (ensure(IsValidChecked(this)))
+	{
+		if (ensure(ImpactSound))
+		{
+			UGameplayStatics::PlaySoundAtLocation(this,ImpactSound,GetActorLocation());
+		}
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactVfx, GetActorLocation(), GetActorRotation());
+
+		Destroy();
+	}
+	
+}

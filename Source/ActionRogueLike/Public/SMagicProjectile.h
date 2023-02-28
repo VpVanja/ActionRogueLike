@@ -22,6 +22,8 @@ public:
 
 protected:
 
+	virtual void PostInitializeComponents() override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	USphereComponent* SphereComp;
 
@@ -30,17 +32,32 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UParticleSystemComponent* EffectComp;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UParticleSystem* ImpactVfx;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UCameraShakeBase> CameraShake;
+	
+	UFUNCTION()
+	void OnActorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
 
 	FTimerHandle CollisionSetTimer;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float DamageAmount = -20.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAudioComponent* AudioComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	USoundBase* ImpactSound;
+
+	UFUNCTION()
+	virtual void OnActorHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	
 	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+
 
 	
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	
 
 };

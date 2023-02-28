@@ -25,6 +25,7 @@ protected:
 
 	FTimerHandle StopProjectileTImerHandle;
 	FTimerHandle TeleportTimerHandle;
+	FTimerHandle TeleportOnHitTimerHandle;
 	UFUNCTION()
 	void StopProjectile();
 
@@ -34,11 +35,12 @@ protected:
 	
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	virtual void Explode_Implementation() override;
+
+	//virtual void OnActorHIt(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
 
 	UFUNCTION()
-	void Teleport();
+	void TeleportInstigator();
 
 public:	
 	// Called every frame
